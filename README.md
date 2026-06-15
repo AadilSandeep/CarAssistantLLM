@@ -226,19 +226,14 @@ python scripts/test_load.py
 
 ## Home Interface
 
-*Add screenshot here*
 
-```markdown
 ![Home Screen](assets/screenshots/Dashboard.jpg)
-```
+
 
 ## warnings Example
 
-*Add screenshot here*
+![Warnings](assets/screenshots/warnings.jpg)
 
-```markdown
-![Diagnosis Example](assets/screenshots/warnings.jpg)
-```
 
 
 ---
