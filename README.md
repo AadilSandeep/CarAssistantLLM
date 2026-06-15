@@ -1,248 +1,339 @@
-# 🚗 Car Assistant LLM
+# 🚗 Car Diagnostic Assistant LLM
 
-A fine-tuned **Phi-2 + QLoRA** car diagnostic assistant that runs entirely locally on **Apple Silicon macOS**. Enter your car symptoms and optional OBD-II codes to receive a structured diagnosis with risk assessment and safety guidance.
+![Python](https://img.shields.io/badge/Python-3.11+-blue)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.x-red)
+![Transformers](https://img.shields.io/badge/HuggingFace-Transformers-yellow)
+![PEFT](https://img.shields.io/badge/PEFT-LoRA-green)
+![Gradio](https://img.shields.io/badge/Gradio-UI-orange)
+![License](https://img.shields.io/badge/License-MIT-lightgrey)
 
----
-
-## Project Overview
-
-| Item | Details |
-|---|---|
-| **Base model** | `microsoft/phi-2` (2.7B parameters) |
-| **Fine-tuning method** | QLoRA (LoRA r=8, α=16) via TRL SFTTrainer |
-| **Training data** | `data/train.jsonl` — car symptom → structured diagnosis pairs |
-| **Adapter** | `models/car-assistant-qlora/` |
-| **UI** | Gradio dashboard with login, OBD lookup, warning light gallery |
-| **Target platform** | Apple Silicon macOS (MPS) |
+An AI-powered automotive diagnostic assistant built using **Microsoft Phi-2**, **LoRA (Low-Rank Adaptation)** fine-tuning, and **Gradio**. The system assists users by analyzing vehicle symptoms and OBD-II fault codes to generate structured diagnostic recommendations.
 
 ---
 
-## Architecture
+# 📖 Overview
 
+Car owners often struggle to interpret vehicle symptoms and OBD-II trouble codes without consulting a mechanic. This project aims to bridge that gap by providing an intelligent diagnostic assistant capable of:
+
+* Understanding vehicle symptoms described in natural language.
+* Interpreting OBD-II fault codes.
+* Suggesting likely causes.
+* Assessing risk levels.
+* Recommending safe checks and next actions.
+
+The assistant combines a fine-tuned Large Language Model with curated automotive diagnostic knowledge to provide practical and easy-to-understand diagnostic guidance.
+
+---
+
+# ✨ Features
+
+### 🔍 Symptom-Based Diagnosis
+
+Analyze user-reported vehicle issues such as:
+
+* Rough idling
+* Engine vibration
+* Hard starting
+* Overheating
+* Brake issues
+* Electrical problems
+* Transmission concerns
+
+### 🛠 OBD-II Code Interpretation
+
+Supports automotive fault code analysis including:
+
+* P0300 – Random Misfire
+* P0301 – Cylinder 1 Misfire
+* P0302 – Cylinder 2 Misfire
+* P0303 – Cylinder 3 Misfire
+* P0304 – Cylinder 4 Misfire
+
+and other diagnostic codes available through the integrated OBD database.
+
+### 📊 Structured Diagnostic Reports
+
+Generates outputs in a mechanic-friendly format:
+
+* Symptom Summary
+* OBD-II Interpretation
+* Likely Causes
+* Risk Level
+* Safe Checks
+* Do Not Do
+* Next Action
+
+### 🤖 Fine-Tuned LLM
+
+Built using:
+
+* Microsoft Phi-2
+* PEFT LoRA fine-tuning
+* Hugging Face Transformers
+* PyTorch
+
+### 💻 User-Friendly Interface
+
+Interactive web application powered by Gradio.
+
+---
+
+# 🏗 System Architecture
+
+```text
+User Symptoms
+       +
+   OBD Codes
+       │
+       ▼
+ OBD Interpreter
+       │
+       ▼
+ Prompt Builder
+       │
+       ▼
+ Microsoft Phi-2
+       +
+  LoRA Adapter
+       │
+       ▼
+ Output Validation
+       │
+       ▼
+ Diagnostic Report
 ```
-Car_Assistant_LLM/
-├── app.py                          # Entrypoint — loads once, launches Gradio
-├── requirements.txt                # Runtime dependencies (no bitsandbytes, no trl)
-├── MIGRATION_REPORT.md             # Colab → local migration documentation
-├── scripts/
-│   └── test_load.py                # Phase 2 model verification script
-├── src/
-│   ├── config.py                   # Paths, constants, generation parameters
-│   ├── model_loader.py             # Tokenizer + Phi-2 + LoRA adapter loading (MPS-aware)
-│   ├── obd_utils.py                # OBD regex, CSV loader, lookup, search
-│   ├── diagnosis.py                # Prompt, generate_once, fallback, diagnose()
-│   └── ui.py                       # Full Gradio dashboard (build_app)
+
+---
+
+# 🧠 Model Information
+
+| Component          | Details                                |
+| ------------------ | -------------------------------------- |
+| Base Model         | Microsoft Phi-2                        |
+| Fine-Tuning Method | LoRA (PEFT)                            |
+| Framework          | Hugging Face Transformers              |
+| Training Dataset   | Custom Automotive Diagnostic Dataset   |
+| Inference Engine   | PyTorch                                |
+| Interface          | Gradio                                 |
+| Platform           | macOS Apple Silicon / Local Deployment |
+
+---
+
+# 📂 Project Structure
+
+```text
+CAR_ASSISTANT/
+
+├── assets/
+│   ├── icons/
+│   └── screenshots/
+│
 ├── data/
-│   ├── train.jsonl                 # Fine-tuning dataset
-│   └── obd-trouble-codes.csv       # ~4000 OBD-II DTC codes
+│   ├── train.jsonl
+│   └── obd-trouble-codes.csv
+│
 ├── models/
 │   └── car-assistant-qlora/
-│       ├── adapter_config.json     # LoRA configuration
-│       ├── adapter_model.safetensors  # LoRA weights (~7.5 MB)
-│       ├── tokenizer.json
-│       ├── tokenizer_config.json
-│       └── checkpoint-14/          # Training checkpoint (fallback adapter)
-├── assets/
-│   └── icons/                      # Warning light PNGs (optional)
-└── notebooks/
-    └── finetuning.ipynb            # Original Colab notebook (source of truth)
-```
-
-### Data Flow
-
-```
-app.py
-  │
-  ├─ load_obd_db()      → obd_db dict
-  ├─ load_model_and_tokenizer() → (model, tokenizer, device)
-  │    ├─ get_device()           → "mps" | "cpu"
-  │    ├─ load_tokenizer()       → AutoTokenizer (phi-2)
-  │    ├─ load_base_model()      → AutoModelForCausalLM (float32)
-  │    └─ load_peft_model()      → PeftModel (LoRA adapter attached)
-  │
-  └─ build_app(model, tokenizer, obd_db)
-       └─ Gradio Blocks
-            ├─ Login page
-            └─ Main app
-                 ├─ Assistant tab → diagnose(symptoms, obd_text) → LLM output
-                 ├─ OBD DB tab   → obd_search / obd_lookup
-                 ├─ Warning Lights tab → gallery + SVG placeholders
-                 └─ Common Problems tab → static reference
+│
+├── notebooks/
+│   └── finetuning.ipynb
+│
+├── scripts/
+│   ├── test_load.py
+│   └── colab_parity_test.py
+│
+├── src/
+│   ├── config.py
+│   ├── model_loader.py
+│   ├── obd_utils.py
+│   ├── diagnosis.py
+│   └── ui.py
+│
+├── app.py
+├── requirements.txt
+├── README.md
+└── LICENSE
 ```
 
 ---
 
-## Installation
+# ⚙️ Installation
 
-### Prerequisites
-
-- macOS with Apple Silicon (M1/M2/M3/M4)
-- Python 3.10 or 3.11
-- ~12 GB free disk space (Phi-2 model weights download ~5 GB)
-- ~12 GB RAM recommended (Phi-2 in float32 uses ~10–11 GB)
-
-### 1. Clone / open the project
+## Clone Repository
 
 ```bash
-cd /path/to/Car_Assistant_LLM
+git clone https://github.com/YOUR_USERNAME/Car_Assistant_LLM.git
+
+cd Car_Assistant_LLM
 ```
 
-### 2. Create a virtual environment
+## Create Virtual Environment
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+python -m venv venv
+
+source venv/bin/activate
 ```
 
-### 3. Install dependencies
+Windows:
 
 ```bash
-pip install --upgrade pip
+venv\Scripts\activate
+```
+
+## Install Dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-> **Note:** `bitsandbytes` is intentionally excluded. 4-bit quantization is CUDA-only and not supported on Apple Silicon. The model loads in float32 instead.
-
 ---
 
-## Setup
+# 🚀 Running the Application
 
-No additional setup is required. The LoRA adapter is already in `models/car-assistant-qlora/`.
-
-On first launch, `microsoft/phi-2` (~5 GB) will be downloaded automatically to `~/.cache/huggingface/hub/`. Subsequent launches use the cached weights.
-
----
-
-## Running Locally
+Launch the Gradio application:
 
 ```bash
 python app.py
 ```
 
-Then open **http://127.0.0.1:7860** in your browser.
+The application will be available locally at:
 
-**Login credentials:** `admin` / `car123`
-
-Expected startup output:
-```
-============================================================
-  Car Assistant LLM — Starting Up
-============================================================
-
-[app] Loading OBD database...
-[app] OBD database ready: XXXX codes loaded.
-
-[app] Loading model and tokenizer...
-[model_loader] Loading tokenizer from 'microsoft/phi-2'...
-[model_loader] Loading base model 'microsoft/phi-2' (float32, mps)...
-[model_loader] Attaching LoRA adapter from '.../models/car-assistant-qlora'...
-[model_loader] LoRA adapter attached successfully (primary).
-
-[app] Model ready on device: mps
-
-[app] Building Gradio interface...
-[app] Launching Gradio...
-[app] Open http://127.0.0.1:7860 in your browser.
+```text
+http://127.0.0.1:7860
 ```
 
 ---
 
-## Model Verification
+# 🧪 Model Verification
 
-Run this **before** launching the full app to confirm the model loads and generates correctly:
+To verify that:
+
+* Phi-2 loads correctly
+* LoRA adapter loads correctly
+* Tokenizer is configured correctly
+* Inference works successfully
+
+run:
 
 ```bash
 python scripts/test_load.py
 ```
 
-This script verifies:
-1. torch, transformers, peft imports
-2. MPS/CPU device detection
-3. Adapter directory and required files
-4. Tokenizer loading
-5. Base model loading (float32)
-6. LoRA adapter attachment
-7. Model configuration summary
-8. Test generation with a car diagnostic prompt
+---
 
-A green `✅ ALL VERIFICATION STEPS PASSED` at the end means the full app is ready.
+# 📸 Screenshots
+
+## Home Interface
+
+*Add screenshot here*
+
+```markdown
+![Home Screen](assets/screenshots/Dashboard.jpg)
+```
+
+## warnings Example
+
+*Add screenshot here*
+
+```markdown
+![Diagnosis Example](assets/screenshots/warnings.jpg)
+```
+
 
 ---
 
-## Troubleshooting
+# 📈 Example Output
 
-### `ModuleNotFoundError: No module named 'bitsandbytes'`
-This is expected and not a problem. `bitsandbytes` is removed from requirements because it requires CUDA. The model runs in float32 on MPS/CPU.
+```text
+Symptom Summary:
+- Strong fuel smell and engine vibration
 
-### Model loads but generation is very slow
-- Phi-2 in float32 on MPS achieves approximately 5–15 tokens/second on M-series chips.
-- First generation may be slower due to MPS kernel compilation.
-- Avoid running other memory-intensive apps simultaneously.
+OBD-II Interpretation:
+- P0302: Cylinder 2 Misfire Detected
 
-### `RuntimeError: MPS backend out of memory`
-- Close other applications.
-- If it persists, the model will automatically fall back to CPU (add `device = "cpu"` override in `src/config.py`).
+Likely Causes:
+1. Faulty spark plug
+2. Ignition coil issue
+3. Fuel injector problem
 
-### Phi-2 download fails
-- Ensure you have a stable internet connection for the first run.
-- The model is cached at `~/.cache/huggingface/hub/models--microsoft--phi-2/`.
-- To pre-download: `python -c "from transformers import AutoModelForCausalLM; AutoModelForCausalLM.from_pretrained('microsoft/phi-2')"`
+Risk Level:
+High
 
-### `adapter_config.json` not found
-- Confirm `models/car-assistant-qlora/` contains `adapter_config.json` and `adapter_model.safetensors`.
-- Run `python scripts/test_load.py` for detailed diagnostics.
+Safe Checks:
+- Inspect spark plugs
+- Check ignition connections
 
-### OBD CSV not loading
-- The file at `data/obd-trouble-codes.csv` is required for the full code database.
-- If missing, the app falls back to a built-in set of 14 common OBD codes.
+Do Not Do:
+- Avoid prolonged driving
 
-### Login not working
-- Default credentials: username `admin`, password `car123`.
-- Credentials are defined in `src/config.py` → `VALID_USERS`.
+Next Action:
+- Schedule engine diagnostic service
+```
 
 ---
 
-## Adapter Loading Explanation
+# ⚠️ Limitations
 
-The project uses a **LoRA adapter** (not a merged model). The inference flow is:
+This project is intended for educational and research purposes.
 
-1. **Base model** (`microsoft/phi-2`) is loaded from HuggingFace Hub in float32.
-2. **LoRA adapter** (`models/car-assistant-qlora/adapter_model.safetensors`, ~7.5 MB) is attached using `PeftModel.from_pretrained()`.
-3. The combined model behaves as the fine-tuned Car Assistant.
-
-**Why not merge?** The adapter can be swapped or updated without re-downloading the 5 GB base model. The `adapter_config.json` records the exact LoRA configuration used during training (r=8, α=16, target modules: q_proj, k_proj, v_proj, o_proj).
-
-**Adapter priority:**
-- Primary: `models/car-assistant-qlora/` (final saved adapter)
-- Fallback: `models/car-assistant-qlora/checkpoint-14/` (mid-training checkpoint, also valid)
+* Not a substitute for professional vehicle diagnostics.
+* Diagnostic recommendations are AI-generated and may not always be accurate.
+* Supports a limited set of training scenarios and OBD fault patterns.
+* Performance depends on the quality and completeness of user-provided information.
 
 ---
 
-## Future Retraining Workflow
+# 🔮 Future Improvements
 
-To retrain or fine-tune the adapter:
-
-1. Prepare training data in `data/train.jsonl` using the `{"text": "<s>[INST] ... [/INST] ... </s>"}` format.
-2. Use the original `notebooks/finetuning.ipynb` as the reference training script (or adapt the training cells into a `scripts/train.py`).
-3. Install training dependencies separately:
-   ```bash
-   pip install trl datasets bitsandbytes  # bitsandbytes only for CUDA training
-   ```
-4. Set `OUT_DIR` to `models/car-assistant-qlora/` in the training script.
-5. After training, verify the new adapter with `python scripts/test_load.py`.
-
-The inference pipeline in `src/` does not need modification — it will automatically use the new adapter weights.
+* Expanded OBD-II code coverage
+* Larger automotive training dataset
+* Retrieval-Augmented Generation (RAG)
+* Multi-turn conversational diagnostics
+* Vehicle-specific recommendations
+* Enhanced confidence scoring
 
 ---
 
-## Tech Stack
+# 👨‍💻 Project Team
 
-| Component | Library |
-|---|---|
-| Base LLM | `microsoft/phi-2` via HuggingFace Transformers |
-| LoRA fine-tuning | PEFT 0.18.1 |
-| Training framework | TRL SFTTrainer (training only) |
-| Inference device | Apple Silicon MPS via PyTorch |
-| UI | Gradio 4.x |
-| OBD data | pandas CSV loader |
-| Serialization | safetensors |
+### Team Members
+
+* Pranav M Nair
+* Aadil Sandeep
+* Advaith S Vinod
+* Thejas Baiju
+
+---
+
+# 🎓 Academic Context
+
+This project was developed as an academic and research-oriented exploration of:
+
+* Automotive Artificial Intelligence
+* Large Language Models
+* Parameter-Efficient Fine-Tuning (PEFT)
+* OBD-II Diagnostic Systems
+* Intelligent Vehicle Assistance Systems
+
+---
+
+# 📜 License
+
+This project is licensed under the MIT License.
+
+See the `LICENSE` file for details.
+
+---
+
+# 🙏 Acknowledgements
+
+* Microsoft Research for the Phi-2 model
+* Hugging Face Transformers
+* PEFT (Parameter-Efficient Fine-Tuning)
+* PyTorch
+* Gradio
+
+---
+
+**Built with AI, Machine Learning, and Automotive Diagnostics in mind.**
