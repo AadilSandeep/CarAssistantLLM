@@ -1,0 +1,23 @@
+# Car Assistant LLM — Runtime Requirements
+# Apple Silicon macOS (M-series)
+#
+# Install with:
+#   pip install -r requirements.txt
+#
+# Notes:
+#   - bitsandbytes is EXCLUDED: 4-bit quantization requires CUDA (not available on MPS/Apple Silicon)
+#   - trl and datasets are EXCLUDED: training-only, not needed for inference
+#   - torch MPS support is built into torch >= 2.0; no separate package needed
+
+# Core ML
+torch>=2.1.0
+transformers>=4.40.0
+peft>=0.10.0
+accelerate>=0.28.0
+safetensors>=0.4.0
+
+# UI
+gradio>=4.20.0
+
+# Data / utilities
+pandas>=2.0.0
