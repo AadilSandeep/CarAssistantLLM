@@ -60,20 +60,19 @@ def load_tokenizer(model_name: str = BASE_MODEL_NAME):
 # ── Model loading (Apple Silicon, float32, no bitsandbytes) ───────────────────
 def load_base_model(model_name: str = BASE_MODEL_NAME, device: str = "cpu"):
     """
-    Load Phi-2 base model in float32 without 4-bit quantization.
+    Load Phi-2 base model in float32/float16 without 4-bit quantization.
 
     bitsandbytes NF4 quantization requires CUDA and is not available on MPS.
-    Phi-2 (~2.7B params) requires ~10-11 GB RAM in float32. On a MacBook Pro
-    with 16+ GB unified memory this is acceptable.
-
-    trust_remote_code=True is required by microsoft/phi-2.
+    To maintain strict parity with the notebook's bnb_4bit_compute_dtype=torch.float16,
+    we use torch.float16 on MPS instead of bfloat16.
     """
-    print(f"[model_loader] Loading base model '{model_name}' (float32, {device})...")
+    dtype = torch.float16 if device == "mps" else torch.float32
+    print(f"[model_loader] Loading base model '{model_name}' (dtype={dtype}, {device})...")
     print("[model_loader] NOTE: First run downloads ~5 GB to ~/.cache/huggingface")
 
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
-        torch_dtype=torch.float32,
+        torch_dtype=dtype,
         low_cpu_mem_usage=True,
         trust_remote_code=True,   # Required for Phi-2
     )

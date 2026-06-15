@@ -105,12 +105,13 @@ except Exception as e:
 # ── Step 4: Load Base Model ───────────────────────────────────────────────────
 print(f"\n--- Step 4: Loading Base Model ({BASE_MODEL}) ---")
 print("NOTE: bitsandbytes 4-bit quantization is CUDA-only.")
-print("Loading in float32 without quantization for Apple Silicon.\n")
+print("Loading in bfloat16/float32 without quantization for Apple Silicon.\n")
 t0 = time.time()
 try:
+    dtype = torch.bfloat16 if device == "mps" else torch.float32
     base_model = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
-        torch_dtype=torch.float32,
+        torch_dtype=dtype,
         low_cpu_mem_usage=True,
         trust_remote_code=True,       # Required for Phi-2
     )

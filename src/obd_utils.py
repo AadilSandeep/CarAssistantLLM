@@ -31,20 +31,15 @@ def explain_obd(codes: list[str], db: dict | None = None) -> str:
     """
     Return a human-readable explanation of a list of OBD codes.
 
-    Looks up codes in the provided `db` dict first (full CSV database),
-    then falls back to the inline OBD_HINTS dict from config.py.
+    To maintain strict parity with the notebook, this function MUST ONLY use
+    the inline OBD_HINTS, ignoring the external CSV database.
     """
     if not codes:
         return "None provided."
 
-    lookup = {}
-    if db:
-        lookup.update(db)
-    lookup.update({k: v for k, v in OBD_HINTS.items() if k not in lookup})
-
     lines = []
     for c in codes:
-        desc = lookup.get(c, "Unknown/General OBD-II code (lookup needed)")
+        desc = OBD_HINTS.get(c, "Unknown/General OBD-II code (lookup needed)")
         lines.append(f"{c}: {desc}")
     return "\n".join(lines)
 

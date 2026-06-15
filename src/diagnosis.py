@@ -133,10 +133,17 @@ def baseline_fallback(symptoms: str, obd_text: str, obd_db: dict | None = None) 
     codes = normalize_obd_codes(obd_text or "")
     codes_str = ", ".join(codes) if codes else "None"
 
-    # Expand OBD hints with extras
+    # Expand OBD hints with extras exactly like notebook
     local_obd = dict(OBD_HINTS)
-    if obd_db:
-        local_obd.update(obd_db)
+    local_obd.update({
+        "P0302": "Cylinder 2 Misfire Detected",
+        "P0303": "Cylinder 3 Misfire Detected",
+        "P0304": "Cylinder 4 Misfire Detected",
+        "P0351": "Ignition Coil A Primary/Secondary Circuit",
+        "P0352": "Ignition Coil B Primary/Secondary Circuit",
+        "P0117": "Engine Coolant Temp Circuit Low Input",
+        "P0118": "Engine Coolant Temp Circuit High Input",
+    })
 
     def explain_obd2(codes):
         if not codes:
