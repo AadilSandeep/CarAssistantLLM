@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+title: Car Diagnostic Assistant LLM
+message: "If you use this project in research, academic work, or publications, please cite it using the metadata below."
+type: software
+
+authors:
+
+* family-names: Nair
+  given-names: Pranav M
+
+* family-names: Sandeep
+  given-names: Aadil
+
+* family-names: Vinod
+  given-names: Advaith S
+
+* family-names: Baiju
+  given-names: Thejas
+
+repository-code: https://github.com/YOUR_USERNAME/YOUR_REPOSITORY
+
+license: MIT
+
+keywords:
+
+* Artificial Intelligence
+* Machine Learning
+* Large Language Models
+* Phi-2
+* LoRA
+* PEFT
+* Automotive Diagnostics
+* OBD-II
+* Vehicle Diagnostics
+
+version: 1.0.0
+
+date-released: 2026-06-15
